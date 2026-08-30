@@ -8,6 +8,8 @@ ROOT = Path(__file__).resolve().parents[1] / "custom_components/google_photos_al
 def test_picker_button_notification_contains_markdown_and_raw_link():
     source = (ROOT / "button.py").read_text()
 
+    assert "persistent_notification.async_create" in source
+    assert "self.coordinator.hass.components" not in source
     assert "[Open Google Photos Picker]" in source
     assert "Raw link:" in source
     assert "session.picker_uri" in source
