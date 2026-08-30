@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6 - 2026-08-30
+
+- Cache imported Google Photos Picker images to local HA storage at import time so the camera no longer depends on expiring Picker `baseUrl` values.
+- Prefer cached image bytes when serving the HA camera; backfill cache on camera reads when possible.
+
 ## 0.2.5 - 2026-08-30
 
 - Fetch Google Photos Picker media bytes with the OAuth bearer token so HA camera snapshots render in dashboard cards and OldPhoneKiosk Photos screen.

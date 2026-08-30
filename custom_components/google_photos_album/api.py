@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
 
@@ -58,6 +59,7 @@ class MediaItem:
     creation_time: str | None = None
     width: str | None = None
     height: str | None = None
+    cached_path: str | None = None
 
     def to_json(self) -> dict[str, Any]:
         """Serialize to config-entry options."""
@@ -74,7 +76,50 @@ class MediaItem:
             creation_time=data.get("creation_time"),
             width=data.get("width"),
             height=data.get("height"),
+            cached_path=data.get("cached_path"),
         )
+
+
+class GooglePhotosMediaCache:
+    """Local file cache for imported Picker images.
+
+    Picker media baseUrl values are not durable enough to use as a long-term
+    photo-frame backing store. Cache bytes at import time and let camera reads
+    prefer local files.
+    """
+
+    def __init__(self, root: str | Path) -> None:
+        self.root = Path(root)
+
+    def path_for(self, media: MediaItem) -> Path:
+        suffix = Path(media.filename).suffix.lower()
+        if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+            suffix = _suffix_for_mime(media.mime_type)
+        return self.root / f"{_safe_media_id(media.id)}{suffix}"
+
+    async def async_store(self, media: MediaItem, data: bytes) -> MediaItem:
+        path = self.path_for(media)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        return MediaItem(
+            id=media.id,
+            filename=media.filename,
+            base_url=media.base_url,
+            mime_type=media.mime_type,
+            creation_time=media.creation_time,
+            width=media.width,
+            height=media.height,
+            cached_path=str(path),
+        )
+
+    def read(self, media: MediaItem) -> bytes | None:
+        if not media.cached_path:
+            return None
+        path = Path(media.cached_path)
+        if not path.is_file():
+            return None
+        data = path.read_bytes()
+        return data or None
 
 
 class GooglePhotosClient:
@@ -177,6 +222,20 @@ class GooglePhotosClient:
                 return await resp.json()
         except aiohttp.ClientError as exc:
             raise GooglePhotosApiError(str(exc)) from exc
+
+
+def _safe_media_id(media_id: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in media_id) or "media"
+
+
+def _suffix_for_mime(mime_type: str) -> str:
+    if mime_type == "image/png":
+        return ".png"
+    if mime_type == "image/webp":
+        return ".webp"
+    if mime_type == "image/gif":
+        return ".gif"
+    return ".jpg"
 
 
 def _picker_session_from_json(data: dict[str, Any]) -> PickerSession:
