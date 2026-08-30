@@ -130,12 +130,17 @@ class GooglePhotosClient:
     async def fetch_image(self, media: MediaItem, width: int = 1600, height: int = 1200) -> bytes:
         """Fetch image bytes from a Google Photos Picker media baseUrl."""
         transform = f"=w{max(width, 1)}-h{max(height, 1)}"
-        async with self._session.get(f"{media.base_url}{transform}") as resp:
+        token = await self._token_provider.async_get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        async with self._session.get(f"{media.base_url}{transform}", headers=headers) as resp:
             if resp.status in {401, 403}:
                 raise GooglePhotosAuthError(await resp.text())
             if resp.status >= 400:
                 raise GooglePhotosApiError(f"Google image fetch {resp.status}: {await resp.text()}")
-            return await resp.read()
+            data = await resp.read()
+            if not data:
+                raise GooglePhotosApiError("Google image fetch returned an empty body")
+            return data
 
     async def _request(
         self,
