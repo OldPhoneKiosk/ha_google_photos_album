@@ -51,8 +51,8 @@ class FakeSession:
             response.get("payload"), response.get("status", 200), response.get("body", b"")
         )
 
-    def get(self, url):
-        self.calls.append({"method": "GET_IMAGE", "url": url})
+    def get(self, url, headers=None):
+        self.calls.append({"method": "GET_IMAGE", "url": url, "headers": headers})
         response = self.responses.pop(0)
         return FakeResponse(
             response.get("payload"), response.get("status", 200), response.get("body", b"image")
@@ -196,3 +196,4 @@ async def test_fetch_image_adds_size_transform():
 
     assert data == b"jpg-bytes"
     assert session.calls[0]["url"] == "https://base/one=w800-h600"
+    assert session.calls[0]["headers"] == {"Authorization": "Bearer token-1"}

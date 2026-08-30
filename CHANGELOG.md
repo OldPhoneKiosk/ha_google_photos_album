@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 - 2026-08-30
+
+- Fetch Google Photos Picker media bytes with the OAuth bearer token so HA camera snapshots render in dashboard cards and OldPhoneKiosk Photos screen.
+- Treat empty Google image responses as explicit camera fetch errors instead of silently returning blank images.
+
 ## 0.2.4 - 2026-08-30
 
 - Fix `Import picked media` when Google Picker session polling omits `pickerUri`; the integration now keeps the persisted picker link and imports selected media normally.
