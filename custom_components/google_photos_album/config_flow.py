@@ -8,20 +8,32 @@ from typing import Any
 from aiohttp import ClientError
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ACCESS_TOKEN
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.config_entry_oauth2_flow import (
-    OAuth2Session,
-    async_get_config_entry_implementation,
-)
 
 from .api import GooglePhotosApiError, GooglePhotosAuthError, GooglePhotosClient
-from .auth import GooglePhotosAuth
 from .const import DOMAIN, SCOPES
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class _FlowTokenProvider:
+    """Access-token provider for validating a freshly completed OAuth flow.
+
+    During async_oauth_create_entry Home Assistant has not created the ConfigEntry yet, so
+    OAuth2Session cannot be used safely on newer HA versions where it requires a real
+    ConfigEntry. The callback token is fresh enough to validate the Google account email.
+    """
+
+    def __init__(self, data: dict[str, Any]) -> None:
+        self._data = data
+
+    async def async_get_access_token(self) -> str:
+        """Return the access token produced by the just-completed OAuth flow."""
+        return str(self._data["token"][CONF_ACCESS_TOKEN])
 
 
 class OAuth2FlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN):
@@ -60,9 +72,7 @@ class OAuth2FlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, doma
             await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
             return self.async_abort(reason="reauth_successful")
 
-        implementation = await async_get_config_entry_implementation(self.hass, self.flow_impl)
-        oauth_session = OAuth2Session(self.hass, data, implementation)
-        auth = GooglePhotosAuth(oauth_session)
+        auth = _FlowTokenProvider(data)
         client = GooglePhotosClient(async_get_clientsession(self.hass), auth)
         try:
             email = await client.get_user_email()

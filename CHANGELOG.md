@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 - 2026-08-30
+
+- Fix Google OAuth callback validation on newer Home Assistant versions by avoiding ConfigEntry OAuth helpers before the entry exists.
+
 ## 0.2.0 - 2026-08-30
 
 - Switch the backend from restricted Library API album listing to official Google Photos Picker API.
