@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     GooglePhotosApiError,
     GooglePhotosClient,
+    GooglePhotosMediaCache,
     MediaItem,
     PickerNotReadyError,
     PickerSession,
@@ -57,6 +58,7 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: GooglePhotosClient) -> None:
         self.entry = entry
         self.client = client
+        self.cache = GooglePhotosMediaCache(hass.config.path(".storage", DOMAIN, entry.entry_id))
         self.selection_mode = entry.options.get(CONF_SELECTION_MODE, DEFAULT_SELECTION_MODE)
         self.update_interval_option = entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
@@ -132,9 +134,21 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
             picked = await self.client.list_picked_media_items(session_id)
         except PickerNotReadyError:
             return 0
+        cached_picked: list[MediaItem] = []
+        for item in picked:
+            try:
+                image = await self.client.fetch_image(item)
+                item = await self.cache.async_store(item, image)
+            except GooglePhotosApiError:
+                _LOGGER.warning(
+                    "Could not cache picked Google Photos media %s; it may expire",
+                    item.id,
+                    exc_info=True,
+                )
+            cached_picked.append(item)
         data = self.data or GooglePhotosAlbumData()
         existing = {item.id: item for item in data.media_items}
-        for item in picked:
+        for item in cached_picked:
             existing[item.id] = item
         data.media_items = list(existing.values())
         if data.media_items and data.current_media is None:
@@ -191,11 +205,23 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
                 await self.async_select_next(force=True)
         if not self.data or not self.data.current_media:
             return None
-        return await self.client.fetch_image(
+        cached = self.cache.read(self.data.current_media)
+        if cached:
+            return cached
+        image = await self.client.fetch_image(
             self.data.current_media,
             width=width or 1600,
             height=height or 1200,
         )
+        if not self.data.current_media.cached_path:
+            try:
+                self.data.current_media = await self.cache.async_store(
+                    self.data.current_media, image
+                )
+                self._persist_options()
+            except OSError:
+                _LOGGER.debug("Could not backfill Google Photos media cache", exc_info=True)
+        return image
 
     async def _async_update_data(self) -> GooglePhotosAlbumData:
         """Load cached media and poll picker session status."""

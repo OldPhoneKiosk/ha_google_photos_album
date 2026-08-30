@@ -4,6 +4,7 @@ import pytest
 
 from custom_components.google_photos_album.api import (
     GooglePhotosClient,
+    GooglePhotosMediaCache,
     MediaItem,
     PickerNotReadyError,
 )
@@ -197,3 +198,21 @@ async def test_fetch_image_adds_size_transform():
     assert data == b"jpg-bytes"
     assert session.calls[0]["url"] == "https://base/one=w800-h600"
     assert session.calls[0]["headers"] == {"Authorization": "Bearer token-1"}
+
+
+@pytest.mark.asyncio
+async def test_media_cache_stores_bytes_and_persists_path(tmp_path):
+    cache = GooglePhotosMediaCache(tmp_path)
+    media = MediaItem(
+        id="m/1",
+        filename="one",
+        base_url="https://base/one",
+        mime_type="image/jpeg",
+    )
+
+    cached = await cache.async_store(media, b"jpg-bytes")
+
+    assert cached.cached_path is not None
+    assert cached.cached_path.endswith("m_1.jpg")
+    assert cache.read(cached) == b"jpg-bytes"
+    assert MediaItem.from_json(cached.to_json()).cached_path == cached.cached_path
