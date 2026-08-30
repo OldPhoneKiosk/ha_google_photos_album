@@ -8,7 +8,7 @@ from custom_components.google_photos_album.api import (
     MediaItem,
     PickerNotReadyError,
 )
-from custom_components.google_photos_album.const import GOOGLE_PICKER_API
+from custom_components.google_photos_album.const import GOOGLE_PICKER_API, INTERVAL_OPTIONS
 
 
 class TokenProvider:
@@ -216,3 +216,24 @@ async def test_media_cache_stores_bytes_and_persists_path(tmp_path):
     assert cached.cached_path.endswith("m_1.jpg")
     assert cache.read(cached) == b"jpg-bytes"
     assert MediaItem.from_json(cached.to_json()).cached_path == cached.cached_path
+
+
+def test_media_cache_delete_removes_only_cached_file(tmp_path):
+    cache = GooglePhotosMediaCache(tmp_path)
+    inside = tmp_path / "old.jpg"
+    inside.write_bytes(b"old")
+    cache.delete(
+        MediaItem(
+            id="old",
+            filename="old.jpg",
+            base_url="https://base/old",
+            mime_type="image/jpeg",
+            cached_path=str(inside),
+        )
+    )
+
+    assert not inside.exists()
+
+
+def test_update_interval_options_are_photo_frame_friendly():
+    assert INTERVAL_OPTIONS == ["Manual", "15s", "30s", "60s", "120s", "5min"]

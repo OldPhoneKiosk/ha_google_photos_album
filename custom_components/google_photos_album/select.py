@@ -82,7 +82,8 @@ class UpdateIntervalSelect(_BaseSelect):
 
     @property
     def current_option(self) -> str | None:
-        return self.coordinator.update_interval_option or DEFAULT_UPDATE_INTERVAL
+        option = self.coordinator.update_interval_option or DEFAULT_UPDATE_INTERVAL
+        return option if option in INTERVAL_OPTIONS else DEFAULT_UPDATE_INTERVAL
 
     async def async_select_option(self, option: str) -> None:
         await self.coordinator.async_select_interval(option)
