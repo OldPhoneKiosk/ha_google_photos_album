@@ -1,0 +1,42 @@
+{
+  "config": {
+    "abort": {
+      "access_error": "Google Photos access failed: {reason}",
+      "auth_failed": "Google OAuth authentication failed.",
+      "already_configured": "This Google account is already configured.",
+      "reauth_successful": "Re-authentication was successful."
+    },
+    "step": {
+      "reauth_confirm": {
+        "title": "Re-authenticate Google Photos",
+        "description": "Google Photos requires a fresh OAuth token."
+      }
+    }
+  },
+  "entity": {
+    "camera": {
+      "media": {
+        "name": "Media"
+      }
+    },
+    "select": {
+      "album": {
+        "name": "Album"
+      },
+      "selection_mode": {
+        "name": "Selection mode"
+      },
+      "update_interval": {
+        "name": "Update interval"
+      }
+    },
+    "sensor": {
+      "media_count": {
+        "name": "Media count"
+      },
+      "filename": {
+        "name": "Filename"
+      }
+    }
+  }
+}

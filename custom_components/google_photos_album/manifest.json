@@ -1,0 +1,12 @@
+{
+  "domain": "google_photos_album",
+  "name": "Google Photos Album",
+  "codeowners": ["@OldPhoneKiosk"],
+  "config_flow": true,
+  "dependencies": ["application_credentials"],
+  "documentation": "https://github.com/OldPhoneKiosk/ha_google_photos_album",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/OldPhoneKiosk/ha_google_photos_album/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
