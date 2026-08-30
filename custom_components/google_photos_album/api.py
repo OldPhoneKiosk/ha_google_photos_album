@@ -40,7 +40,7 @@ class PickerSession:
     """Google Photos Picker session metadata."""
 
     id: str
-    picker_uri: str
+    picker_uri: str | None
     media_items_set: bool = False
     expire_time: str | None = None
     poll_interval: str | None = None
@@ -176,9 +176,10 @@ class GooglePhotosClient:
 
 def _picker_session_from_json(data: dict[str, Any]) -> PickerSession:
     polling = data.get("pollingConfig") or {}
+    picker_uri = data.get("pickerUri")
     return PickerSession(
         id=str(data["id"]),
-        picker_uri=str(data["pickerUri"]),
+        picker_uri=str(picker_uri) if picker_uri else None,
         media_items_set=bool(data.get("mediaItemsSet", False)),
         expire_time=data.get("expireTime"),
         poll_interval=polling.get("pollInterval"),

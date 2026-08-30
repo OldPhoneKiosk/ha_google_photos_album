@@ -110,6 +110,27 @@ async def test_get_picker_session_reads_media_items_set():
 
 
 @pytest.mark.asyncio
+async def test_get_picker_session_allows_missing_picker_uri_on_poll():
+    session = FakeSession(
+        [
+            {
+                "payload": {
+                    "id": "sess-1",
+                    "mediaItemsSet": True,
+                }
+            }
+        ]
+    )
+    client = GooglePhotosClient(session, TokenProvider())
+
+    picker = await client.get_picker_session("sess-1")
+
+    assert picker.id == "sess-1"
+    assert picker.picker_uri is None
+    assert picker.media_items_set is True
+
+
+@pytest.mark.asyncio
 async def test_list_picked_media_items_uses_session_id_and_filters_images():
     session = FakeSession(
         [

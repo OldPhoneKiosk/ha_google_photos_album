@@ -98,7 +98,7 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
         session = await self.client.create_picker_session()
         data = self.data or GooglePhotosAlbumData(media_items=self._load_cached_media())
         data.picker_session_id = session.id
-        data.picker_uri = session.picker_uri
+        data.picker_uri = session.picker_uri or data.picker_uri
         data.picker_expire_time = session.expire_time
         data.picker_media_items_set = session.media_items_set
         self.data = data
@@ -114,7 +114,7 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
         session = await self.client.get_picker_session(session_id)
         data = self.data or GooglePhotosAlbumData(media_items=self._load_cached_media())
         data.picker_session_id = session.id
-        data.picker_uri = session.picker_uri
+        data.picker_uri = session.picker_uri or data.picker_uri
         data.picker_expire_time = session.expire_time
         data.picker_media_items_set = session.media_items_set
         self.data = data
@@ -207,7 +207,7 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
             picker_media_items_set = False
             if session_id:
                 session = await self.client.get_picker_session(session_id)
-                picker_uri = session.picker_uri
+                picker_uri = session.picker_uri or picker_uri
                 picker_expire_time = session.expire_time
                 picker_media_items_set = session.media_items_set
         except GooglePhotosApiError as exc:
