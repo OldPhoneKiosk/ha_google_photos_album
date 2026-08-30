@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from homeassistant.components import persistent_notification
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
@@ -62,7 +63,8 @@ class CreatePickerSessionButton(_BaseButton):
 
     async def async_press(self) -> None:
         session = await self.coordinator.async_create_picker_session()
-        self.coordinator.hass.components.persistent_notification.async_create(
+        persistent_notification.async_create(
+            self.coordinator.hass,
             "Open the Google Photos Picker link below, select photos, tap Done, "
             "then press **Import picked media** in Home Assistant.\n\n"
             f"[Open Google Photos Picker]({session.picker_uri})\n\n"
@@ -85,7 +87,8 @@ class ImportPickedMediaButton(_BaseButton):
             if imported
             else "Picker session is not ready yet, or no images were selected."
         )
-        self.coordinator.hass.components.persistent_notification.async_create(
+        persistent_notification.async_create(
+            self.coordinator.hass,
             message,
             title="Google Photos Picker import",
             notification_id=f"{DOMAIN}_{self.coordinator.entry.entry_id}_import",

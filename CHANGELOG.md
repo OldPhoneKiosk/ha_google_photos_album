@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 - 2026-08-30
+
+- Fix Picker button notifications on newer Home Assistant by using the public persistent_notification helper instead of `hass.components`.
+
 ## 0.2.2 - 2026-08-30
 
 - Make Google Photos Picker sessions easier to open from Home Assistant by using a markdown link in the persistent notification and an explicit `open` picker-session sensor state with `picker_uri` attribute.
