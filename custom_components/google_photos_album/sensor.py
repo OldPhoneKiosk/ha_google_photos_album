@@ -101,7 +101,9 @@ class PickerSessionSensor(_BaseSensor):
         data = self.coordinator.data
         if not data or not data.picker_session_id:
             return "none"
-        return "ready" if data.picker_media_items_set else "waiting"
+        if data.picker_media_items_set:
+            return "ready"
+        return "open" if data.picker_uri else "waiting"
 
     @property
     def extra_state_attributes(self) -> dict[str, str | bool | None]:

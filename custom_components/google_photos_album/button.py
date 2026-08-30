@@ -63,8 +63,10 @@ class CreatePickerSessionButton(_BaseButton):
     async def async_press(self) -> None:
         session = await self.coordinator.async_create_picker_session()
         self.coordinator.hass.components.persistent_notification.async_create(
-            "Open this Google Photos Picker link, select photos, tap Done, then press "
-            f"Import picked media.\n\n{session.picker_uri}",
+            "Open the Google Photos Picker link below, select photos, tap Done, "
+            "then press **Import picked media** in Home Assistant.\n\n"
+            f"[Open Google Photos Picker]({session.picker_uri})\n\n"
+            f"Raw link:\n{session.picker_uri}",
             title="Google Photos Picker session",
             notification_id=f"{DOMAIN}_{self.coordinator.entry.entry_id}_picker",
         )

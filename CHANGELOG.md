@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2 - 2026-08-30
+
+- Make Google Photos Picker sessions easier to open from Home Assistant by using a markdown link in the persistent notification and an explicit `open` picker-session sensor state with `picker_uri` attribute.
+
 ## 0.2.1 - 2026-08-30
 
 - Fix Google OAuth callback validation on newer Home Assistant versions by avoiding ConfigEntry OAuth helpers before the entry exists.
