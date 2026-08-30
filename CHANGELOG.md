@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Documented Google Photos Ambient API as a preferred future backend if OldPhoneKiosk is accepted into the Google Photos Partner Program.
+
 ## 0.1.0 - 2026-08-30
 
 - Initial public HACS integration.

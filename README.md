@@ -79,7 +79,9 @@ data:
 
 ## Google Photos API limitation
 
-This initial implementation uses Google Photos Library API because it is the only Google Photos API that can continuously list album media for a kiosk/photo-frame use case.
+This initial implementation uses Google Photos Library API because it is the only generally documented Google Photos API that can continuously list album media for a kiosk/photo-frame use case.
+
+Google also documents an **Ambient API** for smart TVs/photo frames, but it is part of the Google Photos Partner Program. It is not exposed as a normal public OAuth scope in the standard authorization docs; Google says access requires first being accepted into the partner program. If OldPhoneKiosk gets Ambient API access, this integration should switch to that API behind the same HA-facing `camera`/`select` contract.
 
 Google has changed Photos API access over time. If your OAuth project/account cannot receive the `photoslibrary.readonly` scope, this integration will fail during setup with a Google access error. Because this is our own codebase, the next controlled fallback is adding a Picker API import/cache mode without changing OldPhoneKiosk's HA-facing contract.
 
