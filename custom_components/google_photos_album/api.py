@@ -121,6 +121,16 @@ class GooglePhotosMediaCache:
         data = path.read_bytes()
         return data or None
 
+    def delete(self, media: MediaItem) -> None:
+        if not media.cached_path:
+            return
+        path = Path(media.cached_path)
+        try:
+            if path.is_file() and path.resolve().is_relative_to(self.root.resolve()):
+                path.unlink()
+        except OSError:
+            return
+
 
 class GooglePhotosClient:
     """Small async client for Google Photos Picker API."""

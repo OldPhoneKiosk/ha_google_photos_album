@@ -147,13 +147,13 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
                 )
             cached_picked.append(item)
         data = self.data or GooglePhotosAlbumData()
-        existing = {item.id: item for item in data.media_items}
-        for item in cached_picked:
-            existing[item.id] = item
-        data.media_items = list(existing.values())
-        if data.media_items and data.current_media is None:
-            data.current_media = random.choice(data.media_items)
-            data.selected_at = datetime.now()
+        replaced_media_ids = {item.id for item in cached_picked}
+        for item in data.media_items:
+            if item.id not in replaced_media_ids:
+                self.cache.delete(item)
+        data.media_items = cached_picked
+        data.current_media = random.choice(data.media_items) if data.media_items else None
+        data.selected_at = datetime.now()
         self.data = data
         self._persist_options()
         try:

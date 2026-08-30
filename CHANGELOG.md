@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.7 - 2026-08-30
+
+- Change Google Photos Picker update interval options to photo-frame-friendly values: `15s`, `30s`, `60s`, `120s`, and `5min`.
+- Make `Import picked media` replace the previous picked-media set and delete stale cached files instead of appending to the old selection.
+- Keep support for previously persisted interval values so existing configs do not break after upgrade.
+
 ## 0.2.6 - 2026-08-30
 
 - Cache imported Google Photos Picker images to local HA storage at import time so the camera no longer depends on expiring Picker `baseUrl` values.
