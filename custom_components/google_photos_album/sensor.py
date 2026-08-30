@@ -1,4 +1,4 @@
-"""Sensor entities for Google Photos Album."""
+"""Sensor entities for Google Photos Album Picker."""
 
 from __future__ import annotations
 
@@ -17,7 +17,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up metadata sensors."""
     coordinator: GooglePhotosAlbumCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([MediaCountSensor(coordinator), CurrentFilenameSensor(coordinator)])
+    async_add_entities(
+        [
+            MediaCountSensor(coordinator),
+            CurrentFilenameSensor(coordinator),
+            PickerSessionSensor(coordinator),
+        ]
+    )
 
 
 class _BaseSensor(SensorEntity):
@@ -52,7 +58,7 @@ class _BaseSensor(SensorEntity):
 
 
 class MediaCountSensor(_BaseSensor):
-    """Number of photos available in selected album."""
+    """Number of cached picked photos."""
 
     def __init__(self, coordinator: GooglePhotosAlbumCoordinator) -> None:
         super().__init__(
@@ -76,3 +82,33 @@ class CurrentFilenameSensor(_BaseSensor):
     def native_value(self) -> str | None:
         media = self.coordinator.data.current_media if self.coordinator.data else None
         return media.filename if media else None
+
+
+class PickerSessionSensor(_BaseSensor):
+    """Picker session readiness and link metadata."""
+
+    def __init__(self, coordinator: GooglePhotosAlbumCoordinator) -> None:
+        super().__init__(
+            coordinator,
+            "picker_session",
+            "Picker session",
+            "mdi:google-photos",
+            EntityCategory.DIAGNOSTIC,
+        )
+
+    @property
+    def native_value(self) -> str:
+        data = self.coordinator.data
+        if not data or not data.picker_session_id:
+            return "none"
+        return "ready" if data.picker_media_items_set else "waiting"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str | bool | None]:
+        data = self.coordinator.data
+        return {
+            "picker_session_id": data.picker_session_id if data else None,
+            "picker_uri": data.picker_uri if data else None,
+            "picker_expire_time": data.picker_expire_time if data else None,
+            "media_items_set": data.picker_media_items_set if data else False,
+        }

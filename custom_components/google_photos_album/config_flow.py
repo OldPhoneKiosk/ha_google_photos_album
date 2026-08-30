@@ -66,7 +66,6 @@ class OAuth2FlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, doma
         client = GooglePhotosClient(async_get_clientsession(self.hass), auth)
         try:
             email = await client.get_user_email()
-            await client.list_albums()
         except GooglePhotosAuthError:
             return self.async_abort(reason="auth_failed")
         except (GooglePhotosApiError, ClientError) as exc:

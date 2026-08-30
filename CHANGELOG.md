@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-08-30
 
-- Documented Google Photos Ambient API as a preferred future backend if OldPhoneKiosk is accepted into the Google Photos Partner Program.
+- Switch the backend from restricted Library API album listing to official Google Photos Picker API.
+- Use `photospicker.mediaitems.readonly` instead of `photoslibrary.readonly`.
+- Add Picker session creation/import workflow with HA button entities and diagnostic picker session sensor.
+- Store imported picked media in config-entry options and rotate them through the existing camera entity.
 
 ## 0.1.0 - 2026-08-30
 

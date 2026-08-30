@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 DOMAIN = "google_photos_album"
-PLATFORMS = ["camera", "select", "sensor"]
+PLATFORMS = ["camera", "button", "select", "sensor"]
 
 MANUFACTURER = "Google Photos"
 
-CONF_ALBUM_ID = "album_id"
-CONF_ALBUM_TITLE = "album_title"
 CONF_SELECTION_MODE = "selection_mode"
 CONF_UPDATE_INTERVAL = "update_interval"
-CONF_WRITE_METADATA = "write_metadata"
 
-ALBUM_LIBRARY = "__library__"
+CONF_PICKER_SESSION_ID = "picker_session_id"
+CONF_PICKER_URI = "picker_uri"
+CONF_PICKER_EXPIRE_TIME = "picker_expire_time"
+CONF_PICKED_MEDIA = "picked_media"
 
 MODE_RANDOM = "Random"
 MODE_SEQUENTIAL = "Sequential"
@@ -46,8 +46,8 @@ DEFAULT_UPDATE_INTERVAL = INTERVAL_15_MIN
 
 SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/photoslibrary.readonly",
+    "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
 ]
 
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-GOOGLE_PHOTOS_API = "https://photoslibrary.googleapis.com/v1"
+GOOGLE_PICKER_API = "https://photospicker.googleapis.com/v1"

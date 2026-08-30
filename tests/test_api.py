@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from custom_components.google_photos_album.api import GooglePhotosClient
-from custom_components.google_photos_album.const import ALBUM_LIBRARY
+from custom_components.google_photos_album.api import (
+    GooglePhotosClient,
+    MediaItem,
+    PickerNotReadyError,
+)
+from custom_components.google_photos_album.const import GOOGLE_PICKER_API
 
 
 class TokenProvider:
@@ -47,8 +51,8 @@ class FakeSession:
             response.get("payload"), response.get("status", 200), response.get("body", b"")
         )
 
-    def get(self, url, headers=None):
-        self.calls.append({"method": "GET_IMAGE", "url": url, "headers": headers})
+    def get(self, url):
+        self.calls.append({"method": "GET_IMAGE", "url": url})
         response = self.responses.pop(0)
         return FakeResponse(
             response.get("payload"), response.get("status", 200), response.get("body", b"image")
@@ -56,29 +60,57 @@ class FakeSession:
 
 
 @pytest.mark.asyncio
-async def test_list_albums_includes_library_normal_and_shared():
+async def test_create_picker_session_posts_request_id_and_returns_uri():
     session = FakeSession(
         [
-            {"payload": {"albums": [{"id": "a1", "title": "Family", "mediaItemsCount": "7"}]}},
             {
                 "payload": {
-                    "sharedAlbums": [{"id": "s1", "title": "Shared", "mediaItemsCount": "3"}]
+                    "id": "sess-1",
+                    "pickerUri": "https://photos.google.com/picker/sess-1",
+                    "mediaItemsSet": False,
+                    "expireTime": "2026-08-30T10:00:00Z",
+                    "pollingConfig": {"pollInterval": "5s", "timeoutIn": "600s"},
                 }
-            },
+            }
         ]
     )
     client = GooglePhotosClient(session, TokenProvider())
 
-    albums = await client.list_albums()
+    picker = await client.create_picker_session()
 
-    assert [album.id for album in albums] == [ALBUM_LIBRARY, "a1", "s1"]
-    assert albums[1].title == "Family"
-    assert albums[1].media_items_count == 7
-    assert albums[2].shared is True
+    assert session.calls[0]["method"] == "POST"
+    assert session.calls[0]["url"] == f"{GOOGLE_PICKER_API}/sessions"
+    assert "requestId" in session.calls[0]["params"]
+    assert session.calls[0]["json"] == {}
+    assert picker.id == "sess-1"
+    assert picker.picker_uri.endswith("sess-1")
+    assert picker.poll_interval == "5s"
 
 
 @pytest.mark.asyncio
-async def test_album_media_search_uses_album_id_and_filters_images():
+async def test_get_picker_session_reads_media_items_set():
+    session = FakeSession(
+        [
+            {
+                "payload": {
+                    "id": "sess-1",
+                    "pickerUri": "https://photos.google.com/picker/sess-1",
+                    "mediaItemsSet": True,
+                }
+            }
+        ]
+    )
+    client = GooglePhotosClient(session, TokenProvider())
+
+    picker = await client.get_picker_session("sess-1")
+
+    assert session.calls[0]["method"] == "GET"
+    assert session.calls[0]["url"] == f"{GOOGLE_PICKER_API}/sessions/sess-1"
+    assert picker.media_items_set is True
+
+
+@pytest.mark.asyncio
+async def test_list_picked_media_items_uses_session_id_and_filters_images():
     session = FakeSession(
         [
             {
@@ -86,16 +118,21 @@ async def test_album_media_search_uses_album_id_and_filters_images():
                     "mediaItems": [
                         {
                             "id": "m1",
-                            "filename": "one.jpg",
-                            "baseUrl": "https://base/one",
-                            "mimeType": "image/jpeg",
-                            "mediaMetadata": {"creationTime": "2026-08-30T10:00:00Z"},
+                            "createTime": "2026-08-30T10:00:00Z",
+                            "mediaFile": {
+                                "filename": "one.jpg",
+                                "baseUrl": "https://base/one",
+                                "mimeType": "image/jpeg",
+                                "mediaFileMetadata": {"width": "4000", "height": "3000"},
+                            },
                         },
                         {
                             "id": "v1",
-                            "filename": "clip.mov",
-                            "baseUrl": "https://base/video",
-                            "mimeType": "video/quicktime",
+                            "mediaFile": {
+                                "filename": "clip.mov",
+                                "baseUrl": "https://base/video",
+                                "mimeType": "video/quicktime",
+                            },
                         },
                     ]
                 }
@@ -104,31 +141,30 @@ async def test_album_media_search_uses_album_id_and_filters_images():
     )
     client = GooglePhotosClient(session, TokenProvider())
 
-    items = await client.list_media_items("album-1")
-
-    assert session.calls[0]["method"] == "POST"
-    assert session.calls[0]["url"].endswith("/mediaItems:search")
-    assert session.calls[0]["json"] == {"albumId": "album-1", "pageSize": 100}
-    assert [item.id for item in items] == ["m1"]
-    assert items[0].creation_time == "2026-08-30T10:00:00Z"
-
-
-@pytest.mark.asyncio
-async def test_library_media_uses_media_items_get_endpoint():
-    session = FakeSession([{"payload": {"mediaItems": []}}])
-    client = GooglePhotosClient(session, TokenProvider())
-
-    await client.list_media_items(ALBUM_LIBRARY)
+    items = await client.list_picked_media_items("sess-1")
 
     assert session.calls[0]["method"] == "GET"
-    assert session.calls[0]["url"].endswith("/mediaItems")
-    assert session.calls[0]["params"] == {"pageSize": "100"}
+    assert session.calls[0]["url"] == f"{GOOGLE_PICKER_API}/mediaItems"
+    assert session.calls[0]["params"] == {"sessionId": "sess-1", "pageSize": "100"}
+    assert [item.id for item in items] == ["m1"]
+    assert items[0].filename == "one.jpg"
+    assert items[0].creation_time == "2026-08-30T10:00:00Z"
+    assert items[0].width == "4000"
 
 
 @pytest.mark.asyncio
-async def test_fetch_image_adds_size_transform_and_auth_header():
-    from custom_components.google_photos_album.api import MediaItem
+async def test_list_picked_media_items_raises_not_ready_on_failed_precondition():
+    session = FakeSession(
+        [{"payload": {"error": {"status": "FAILED_PRECONDITION"}}, "status": 400}]
+    )
+    client = GooglePhotosClient(session, TokenProvider())
 
+    with pytest.raises(PickerNotReadyError):
+        await client.list_picked_media_items("sess-1")
+
+
+@pytest.mark.asyncio
+async def test_fetch_image_adds_size_transform():
     session = FakeSession([{"body": b"jpg-bytes"}])
     client = GooglePhotosClient(session, TokenProvider())
     media = MediaItem(

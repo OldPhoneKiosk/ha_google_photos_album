@@ -1,15 +1,15 @@
 {
   "config": {
     "abort": {
-      "access_error": "Google Photos access failed: {reason}",
+      "access_error": "Google Photos Picker access failed: {reason}",
       "auth_failed": "Google OAuth authentication failed.",
       "already_configured": "This Google account is already configured.",
       "reauth_successful": "Re-authentication was successful."
     },
     "step": {
       "reauth_confirm": {
-        "title": "Re-authenticate Google Photos",
-        "description": "Google Photos requires a fresh OAuth token."
+        "title": "Re-authenticate Google Photos Picker",
+        "description": "Google Photos Picker requires a fresh OAuth token."
       }
     }
   },
@@ -19,10 +19,15 @@
         "name": "Media"
       }
     },
-    "select": {
-      "album": {
-        "name": "Album"
+    "button": {
+      "create_picker_session": {
+        "name": "Create picker session"
       },
+      "import_picked_media": {
+        "name": "Import picked media"
+      }
+    },
+    "select": {
       "selection_mode": {
         "name": "Selection mode"
       },
@@ -36,6 +41,9 @@
       },
       "filename": {
         "name": "Filename"
+      },
+      "picker_session": {
+        "name": "Picker session"
       }
     }
   }

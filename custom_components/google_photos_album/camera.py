@@ -59,13 +59,12 @@ class GooglePhotosAlbumCamera(Camera):
         data = self.coordinator.data
         media = data.current_media if data else None
         return {
-            "album_id": self.coordinator.selected_album_id,
-            "album_title": self.coordinator.selected_album_title,
             "media_id": media.id if media else None,
             "filename": media.filename if media else None,
-            "product_url": media.product_url if media else None,
             "creation_time": media.creation_time if media else None,
             "media_count": len(data.media_items) if data else 0,
+            "picker_session_id": data.picker_session_id if data else None,
+            "picker_ready": data.picker_media_items_set if data else False,
         }
 
     @callback

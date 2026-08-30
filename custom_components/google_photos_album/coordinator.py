@@ -1,4 +1,4 @@
-"""Coordinator for Google Photos Album."""
+"""Coordinator for Google Photos Album Picker collections."""
 
 from __future__ import annotations
 
@@ -13,11 +13,18 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .api import Album, GooglePhotosApiError, GooglePhotosClient, MediaItem
+from .api import (
+    GooglePhotosApiError,
+    GooglePhotosClient,
+    MediaItem,
+    PickerNotReadyError,
+    PickerSession,
+)
 from .const import (
-    ALBUM_LIBRARY,
-    CONF_ALBUM_ID,
-    CONF_ALBUM_TITLE,
+    CONF_PICKED_MEDIA,
+    CONF_PICKER_EXPIRE_TIME,
+    CONF_PICKER_SESSION_ID,
+    CONF_PICKER_URI,
     CONF_SELECTION_MODE,
     CONF_UPDATE_INTERVAL,
     DEFAULT_SELECTION_MODE,
@@ -35,16 +42,17 @@ _LOGGER = logging.getLogger(__name__)
 class GooglePhotosAlbumData:
     """Coordinator state."""
 
-    albums: list[Album] = field(default_factory=list)
     media_items: list[MediaItem] = field(default_factory=list)
     current_media: MediaItem | None = None
-    selected_album_id: str = ALBUM_LIBRARY
-    selected_album_title: str = "All library photos"
     selected_at: datetime = field(default_factory=lambda: datetime.fromtimestamp(0))
+    picker_session_id: str | None = None
+    picker_uri: str | None = None
+    picker_expire_time: str | None = None
+    picker_media_items_set: bool = False
 
 
 class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData]):
-    """Coordinates albums, media list, and image selection."""
+    """Coordinates picker sessions, cached selections, and image rotation."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: GooglePhotosClient) -> None:
         self.entry = entry
@@ -53,8 +61,6 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
         self.update_interval_option = entry.options.get(
             CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
         )
-        self.selected_album_id = entry.options.get(CONF_ALBUM_ID, ALBUM_LIBRARY)
-        self.selected_album_title = entry.options.get(CONF_ALBUM_TITLE, "All library photos")
         kwargs = {
             "logger": _LOGGER,
             "name": f"{DOMAIN}_{entry.entry_id}",
@@ -70,39 +76,83 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
         return DeviceInfo(
             identifiers={(DOMAIN, self.entry.entry_id)},
             manufacturer=MANUFACTURER,
-            name=f"Google Photos Album ({self.entry.title})",
+            name=f"Google Photos Picker ({self.entry.title})",
         )
 
     @property
-    def album_options(self) -> list[str]:
-        """Album titles for select entity."""
-        data = self.data
-        if not data or not data.albums:
-            return [self.selected_album_title]
-        return [self._album_label(album) for album in data.albums]
+    def picker_uri(self) -> str | None:
+        """Return latest picker URI."""
+        if self.data and self.data.picker_uri:
+            return self.data.picker_uri
+        return self.entry.options.get(CONF_PICKER_URI)
 
     @property
-    def current_album_label(self) -> str:
-        """Selected album title label."""
-        data = self.data
-        if data:
-            for album in data.albums:
-                if album.id == self.selected_album_id:
-                    return self._album_label(album)
-        return self.selected_album_title
+    def picker_session_id(self) -> str | None:
+        """Return latest picker session id."""
+        if self.data and self.data.picker_session_id:
+            return self.data.picker_session_id
+        return self.entry.options.get(CONF_PICKER_SESSION_ID)
 
-    async def async_select_album(self, label: str) -> None:
-        """Select an album by select option label."""
-        if not self.data:
-            await self.async_request_refresh()
-        assert self.data is not None
-        album = next((item for item in self.data.albums if self._album_label(item) == label), None)
-        if album is None:
-            return
-        self.selected_album_id = album.id
-        self.selected_album_title = album.title
+    async def async_create_picker_session(self) -> PickerSession:
+        """Create a new Picker API session and persist its URI."""
+        session = await self.client.create_picker_session()
+        data = self.data or GooglePhotosAlbumData(media_items=self._load_cached_media())
+        data.picker_session_id = session.id
+        data.picker_uri = session.picker_uri
+        data.picker_expire_time = session.expire_time
+        data.picker_media_items_set = session.media_items_set
+        self.data = data
         self._persist_options()
-        await self.async_refresh()
+        self.async_update_listeners()
+        return session
+
+    async def async_poll_picker_session(self) -> PickerSession | None:
+        """Poll latest picker session and update readiness status."""
+        session_id = self.picker_session_id
+        if not session_id:
+            return None
+        session = await self.client.get_picker_session(session_id)
+        data = self.data or GooglePhotosAlbumData(media_items=self._load_cached_media())
+        data.picker_session_id = session.id
+        data.picker_uri = session.picker_uri
+        data.picker_expire_time = session.expire_time
+        data.picker_media_items_set = session.media_items_set
+        self.data = data
+        self._persist_options()
+        self.async_update_listeners()
+        return session
+
+    async def async_import_picked_media(self) -> int:
+        """Import media from the latest completed picker session into cached selection."""
+        session_id = self.picker_session_id
+        if not session_id:
+            return 0
+        await self.async_poll_picker_session()
+        try:
+            picked = await self.client.list_picked_media_items(session_id)
+        except PickerNotReadyError:
+            return 0
+        data = self.data or GooglePhotosAlbumData()
+        existing = {item.id: item for item in data.media_items}
+        for item in picked:
+            existing[item.id] = item
+        data.media_items = list(existing.values())
+        if data.media_items and data.current_media is None:
+            data.current_media = random.choice(data.media_items)
+            data.selected_at = datetime.now()
+        self.data = data
+        self._persist_options()
+        try:
+            await self.client.delete_picker_session(session_id)
+            data.picker_session_id = None
+            data.picker_uri = None
+            data.picker_expire_time = None
+            data.picker_media_items_set = False
+        except GooglePhotosApiError:
+            _LOGGER.debug("Could not delete picker session %s", session_id, exc_info=True)
+        self._persist_options()
+        self.async_update_listeners()
+        return len(picked)
 
     async def async_select_mode(self, mode: str) -> None:
         """Select image rotation mode."""
@@ -119,12 +169,11 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
 
     async def async_select_next(self, *, force: bool = False) -> None:
         """Select next/current image and notify entities."""
-        if not self.data or not self.data.media_items:
+        if not self.data:
             await self.async_request_refresh()
+        if not self.data or not self.data.media_items:
             return
         items = self.data.media_items
-        if not items:
-            return
         if self.selection_mode == MODE_RANDOM:
             current = random.choice(items)
         else:
@@ -149,25 +198,35 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
         )
 
     async def _async_update_data(self) -> GooglePhotosAlbumData:
-        """Fetch albums and selected album's media."""
+        """Load cached media and poll picker session status."""
         try:
-            albums = await self.client.list_albums()
-            album = next((item for item in albums if item.id == self.selected_album_id), albums[0])
-            self.selected_album_id = album.id
-            self.selected_album_title = album.title
-            media_items = await self.client.list_media_items(album.id)
+            cached = self._load_cached_media()
+            session_id = self.entry.options.get(CONF_PICKER_SESSION_ID)
+            picker_uri = self.entry.options.get(CONF_PICKER_URI)
+            picker_expire_time = self.entry.options.get(CONF_PICKER_EXPIRE_TIME)
+            picker_media_items_set = False
+            if session_id:
+                session = await self.client.get_picker_session(session_id)
+                picker_uri = session.picker_uri
+                picker_expire_time = session.expire_time
+                picker_media_items_set = session.media_items_set
         except GooglePhotosApiError as exc:
             raise UpdateFailed(str(exc)) from exc
         data = GooglePhotosAlbumData(
-            albums=albums,
-            media_items=media_items,
-            selected_album_id=album.id,
-            selected_album_title=album.title,
+            media_items=cached,
+            picker_session_id=session_id,
+            picker_uri=picker_uri,
+            picker_expire_time=picker_expire_time,
+            picker_media_items_set=picker_media_items_set,
         )
-        if media_items:
-            data.current_media = random.choice(media_items)
-            data.selected_at = datetime.now()
-        self._persist_options()
+        if cached:
+            current = None
+            if self.data and self.data.current_media:
+                current = next(
+                    (item for item in cached if item.id == self.data.current_media.id), None
+                )
+            data.current_media = current or cached[0]
+            data.selected_at = self.data.selected_at if self.data else datetime.now()
         return data
 
     async def _maybe_rotate(self) -> bool:
@@ -182,19 +241,26 @@ class GooglePhotosAlbumCoordinator(DataUpdateCoordinator[GooglePhotosAlbumData])
             return True
         return False
 
+    def _load_cached_media(self) -> list[MediaItem]:
+        raw = self.entry.options.get(CONF_PICKED_MEDIA, [])
+        return [MediaItem.from_json(item) for item in raw if isinstance(item, dict)]
+
     def _persist_options(self) -> None:
+        data = self.data
         options = {**self.entry.options}
         options.update(
             {
-                CONF_ALBUM_ID: self.selected_album_id,
-                CONF_ALBUM_TITLE: self.selected_album_title,
                 CONF_SELECTION_MODE: self.selection_mode,
                 CONF_UPDATE_INTERVAL: self.update_interval_option,
             }
         )
+        if data:
+            options.update(
+                {
+                    CONF_PICKED_MEDIA: [item.to_json() for item in data.media_items],
+                    CONF_PICKER_SESSION_ID: data.picker_session_id,
+                    CONF_PICKER_URI: data.picker_uri,
+                    CONF_PICKER_EXPIRE_TIME: data.picker_expire_time,
+                }
+            )
         self.hass.config_entries.async_update_entry(self.entry, options=options)
-
-    def _album_label(self, album: Album) -> str:
-        count = "?" if album.media_items_count is None else str(album.media_items_count)
-        suffix = " shared" if album.shared else ""
-        return f"{album.title} ({count} items{suffix})"

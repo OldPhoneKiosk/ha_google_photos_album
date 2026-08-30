@@ -1,4 +1,4 @@
-"""Select entities for Google Photos Album."""
+"""Select entities for Google Photos Album Picker."""
 
 from __future__ import annotations
 
@@ -23,13 +23,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up select entities."""
     coordinator: GooglePhotosAlbumCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities(
-        [
-            AlbumSelect(coordinator),
-            SelectionModeSelect(coordinator),
-            UpdateIntervalSelect(coordinator),
-        ]
-    )
+    async_add_entities([SelectionModeSelect(coordinator), UpdateIntervalSelect(coordinator)])
 
 
 class _BaseSelect(SelectEntity):
@@ -56,24 +50,6 @@ class _BaseSelect(SelectEntity):
     @callback
     def _handle_coordinator_update(self) -> None:
         self.async_write_ha_state()
-
-
-class AlbumSelect(_BaseSelect):
-    """Select the Google Photos album used by the camera."""
-
-    def __init__(self, coordinator: GooglePhotosAlbumCoordinator) -> None:
-        super().__init__(coordinator, "album", "Album", "mdi:image-album")
-
-    @property
-    def options(self) -> list[str]:
-        return self.coordinator.album_options
-
-    @property
-    def current_option(self) -> str | None:
-        return self.coordinator.current_album_label
-
-    async def async_select_option(self, option: str) -> None:
-        await self.coordinator.async_select_album(option)
 
 
 class SelectionModeSelect(_BaseSelect):
