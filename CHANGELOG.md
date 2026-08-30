@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 - 2026-08-30
+
+- Fix `Import picked media` when Google Picker session polling omits `pickerUri`; the integration now keeps the persisted picker link and imports selected media normally.
+
 ## 0.2.3 - 2026-08-30
 
 - Fix Picker button notifications on newer Home Assistant by using the public persistent_notification helper instead of `hass.components`.
