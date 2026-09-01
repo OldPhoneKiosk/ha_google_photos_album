@@ -4,9 +4,22 @@
   <img src="icon.png" alt="Google Photos Album icon" width="128" height="128">
 </p>
 
+[![Open your Home Assistant instance and add this repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=OldPhoneKiosk&repository=ha_google_photos_album&category=integration)
+[![CI](https://github.com/OldPhoneKiosk/ha_google_photos_album/actions/workflows/ci.yml/badge.svg)](https://github.com/OldPhoneKiosk/ha_google_photos_album/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/OldPhoneKiosk/ha_google_photos_album?label=HACS%20release)](https://github.com/OldPhoneKiosk/ha_google_photos_album/releases/latest)
+![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.6%2B-41BDF5)
+
 Public HACS custom integration that exposes media selected with the official Google Photos **Picker API** as a native Home Assistant `camera` entity.
 
 This is built for OldPhoneKiosk: Home Assistant owns Google OAuth and selected-photo cache, while the phone/tablet consumes a normal HA camera/photo source and never receives Google tokens.
+
+## At a glance
+
+- **Install method:** HACS custom repository using normal release/tag source downloads; no ZIP asset is required.
+- **Minimum Home Assistant:** 2025.6.0.
+- **Branding:** official Google Photos icon in `icon.png` and `custom_components/google_photos_album/icon.png`.
+- **Entity model:** one selected Google Photos Picker collection exposed as a native `camera.*` entity.
+- **Privacy model:** Google OAuth/token handling stays inside Home Assistant; companion panels only consume HA camera output.
 
 ## Why Picker API
 
@@ -34,7 +47,8 @@ Google also documents an Ambient API for smart TVs/photo frames, but that requir
 
 [![Open your Home Assistant instance and add this repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=OldPhoneKiosk&repository=ha_google_photos_album&category=integration)
 
-1. Add this repository to HACS as an integration repository.
+1. Click the HACS badge at the top of this README, or add this repository manually in HACS.
+   HACS installs this repository from the selected release/tag source archive; this project intentionally does not require a separate ZIP asset.
 2. Download **Google Photos Album**.
 3. Restart Home Assistant.
 4. Configure Google OAuth application credentials in HA if prompted.

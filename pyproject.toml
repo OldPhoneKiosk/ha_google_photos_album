@@ -1,6 +1,6 @@
 [project]
 name = "ha-google-photos-album"
-version = "1.0.0"
+version = "1.1.0"
 description = "Home Assistant custom integration exposing a selected Google Photos album as a camera entity"
 requires-python = ">=3.11"
 dependencies = ["aiohttp>=3.9"]
