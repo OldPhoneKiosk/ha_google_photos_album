@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0 - 2026-09-01
+
+- Mark Google Photos Album as the first stable HACS release.
+- Keep HACS metadata configured for release/tag source downloads.
+- Add official Google Photos branding icons for HACS/README display.
+
 ## 0.2.7 - 2026-08-30
 
 - Change Google Photos Picker update interval options to photo-frame-friendly values: `15s`, `30s`, `60s`, `120s`, and `5min`.
