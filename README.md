@@ -1,5 +1,9 @@
 # Google Photos Album for Home Assistant
 
+<p align="center">
+  <img src="icon.png" alt="Google Photos Album icon" width="128" height="128">
+</p>
+
 Public HACS custom integration that exposes media selected with the official Google Photos **Picker API** as a native Home Assistant `camera` entity.
 
 This is built for OldPhoneKiosk: Home Assistant owns Google OAuth and selected-photo cache, while the phone/tablet consumes a normal HA camera/photo source and never receives Google tokens.
