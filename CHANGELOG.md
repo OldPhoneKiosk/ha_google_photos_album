@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 - 2026-09-01
+
+- Polish the public HACS/GitHub presentation: repository topics, homepage, description, README badges and install guidance, and stable release metadata.
+- Declare the integration as a Home Assistant service integration and keep official Google Photos branding visible in README/HACS assets.
+
 ## 1.0.0 - 2026-09-01
 
 - Mark Google Photos Album as the first stable HACS release.
